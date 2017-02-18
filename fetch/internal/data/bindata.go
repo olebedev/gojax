@@ -3,7 +3,7 @@
 // dist/bundle.js
 // DO NOT EDIT!
 
-package fetch
+package data
 
 import (
 	"bytes"

@@ -10,15 +10,21 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/eventloop"
+	"github.com/olebedev/gojax/fetch/internal/data"
 	"github.com/pkg/errors"
 )
 
+// Enable enables fetch for the instance. Loop instance is required instead of
+// flat goja's. B/c fetch polyfill uses timeouts for promises.
+//
+// The second parameter could be any http handler. Even you local instance,
+// to handle http requests locally programmatically.
 func Enable(loop *eventloop.EventLoop, proxy http.Handler) error {
 	if proxy == nil {
 		return errors.New("proxy handler cannot be nil")
 	}
 
-	script := string(MustAsset("dist/bundle.js"))
+	script := string(data.MustAsset("dist/bundle.js"))
 	prg, err := goja.Compile("fetch.js", script, false)
 	if err != nil {
 		return errors.Wrap(err, "compile script")

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "embed": "go-bindata -pkg=\"fetch\" ./dist/bundle.js "
+    "embed": "go-bindata -pkg=\"data\" -o ./internal/data/bindata.go ./dist/bundle.js "
   },
   "author": "",
   "license": "ISC",
