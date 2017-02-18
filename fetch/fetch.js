@@ -6,8 +6,9 @@
  */
 
 var Headers = require('node-fetch/lib/headers');
-var assign = require('lodash/object/assign');
 
+var serverSideFetchFunc = global.__fetch__;
+delete global.__fetch__;
 
 module.exports = Fetch;
 
@@ -42,7 +43,7 @@ function Fetch(url, o) {
     var headers = new Headers(options.headers || {});
 
     if (!headers.has('user-agent')) {
-      headers.set('user-agent', 'golang-fetch/0.0 (+https://github.com/olebedev/go-duktape-fetch)');
+      headers.set('user-agent', 'golang-fetch/0.1 (+https://github.com/olebedev/gojax/fetch)');
     }
 
     headers.set('connection', 'close');
@@ -54,7 +55,7 @@ function Fetch(url, o) {
     options.headers = headers.raw();
 
     // send a request
-    var res = Fetch.goFetchSync(url, options);
+    var res = serverSideFetchFunc(url, options);
     res.url = url;
 
     resolve(new Response(res));
@@ -70,7 +71,13 @@ function Fetch(url, o) {
  */
 
 function Response(r) {
-  assign(this, r)
+  for (k in r) {
+    if (k === 'headers') {
+      this[k] = new Headers(r[k]);
+    } else {
+      this[k] = r[k];
+    }
+  }
   this.ok = this.status >= 200 && this.status < 300;
 }
 
