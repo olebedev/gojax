@@ -30,7 +30,7 @@ func Enable(loop *eventloop.EventLoop, proxy http.Handler) error {
 		return errors.Wrap(err, "compile script")
 	}
 	loop.RunOnLoop(func(vm *goja.Runtime) {
-		vm.Set("__fetch__", request(vm, proxy))
+		vm.Set("__fetch__", request(loop, proxy))
 		_, err := vm.RunProgram(prg)
 		if err != nil {
 			panic(err)
@@ -40,56 +40,63 @@ func Enable(loop *eventloop.EventLoop, proxy http.Handler) error {
 	return nil
 }
 
-func request(vm *goja.Runtime, proxy http.Handler) func(call goja.FunctionCall) goja.Value {
+func request(loop *eventloop.EventLoop, proxy http.Handler) func(call goja.FunctionCall) goja.Value {
 	return func(call goja.FunctionCall) goja.Value {
-		u := call.Argument(0).String()
-		o := call.Argument(1).Export().(map[string]interface{})
+		if fn, ok := goja.AssertFunction(call.Argument(2)); ok {
+			u := call.Argument(0).String()
+			o := call.Argument(1).Export().(map[string]interface{})
 
-		var body io.Reader
-		method := http.MethodGet
-		header := make(http.Header)
+			go func() {
+				var body io.Reader
+				method := http.MethodGet
+				header := make(http.Header)
 
-		if h, ex := o["headers"]; ex {
-			if he, ok := h.(http.Header); ok {
-				for key, value := range he {
-					header[textproto.CanonicalMIMEHeaderKey(key)] = value
+				if h, ex := o["headers"]; ex {
+					if he, ok := h.(http.Header); ok {
+						for key, value := range he {
+							header[textproto.CanonicalMIMEHeaderKey(key)] = value
+						}
+					}
 				}
-			}
+
+				if b, ex := o["body"]; ex {
+					if bo, ok := b.(string); ok {
+						body = bytes.NewBufferString(bo)
+					}
+				}
+
+				if m, ex := o["method"]; ex {
+					if me, ok := m.(string); ok {
+						method = me
+					}
+				}
+
+				var toRet map[string]interface{}
+
+				res := httptest.NewRecorder()
+				req, err := http.NewRequest(method, u, body)
+				if err != nil {
+					toRet = map[string]interface{}{
+						"body":    fmt.Sprintf("Internal Server Error: %s", err.Error()),
+						"headers": make(map[string][]string),
+						"status":  http.StatusInternalServerError,
+						"method":  method,
+						"url":     u,
+					}
+				} else {
+					req.Header = header
+					proxy.ServeHTTP(res, req)
+					toRet = map[string]interface{}{
+						"body":    res.Body.String(),
+						"headers": map[string][]string(res.Header()),
+						"status":  res.Code,
+						"method":  method,
+						"url":     u,
+					}
+				}
+				loop.RunOnLoop(func(vm *goja.Runtime) { fn(nil, vm.ToValue(toRet)) })
+			}()
 		}
-
-		if b, ex := o["body"]; ex {
-			if bo, ok := b.(string); ok {
-				body = bytes.NewBufferString(bo)
-			}
-		}
-
-		if m, ex := o["method"]; ex {
-			if me, ok := m.(string); ok {
-				method = me
-			}
-		}
-
-		res := httptest.NewRecorder()
-		req, err := http.NewRequest(method, u, body)
-		if err != nil {
-			return vm.ToValue(map[string]interface{}{
-				"body":    fmt.Sprintf("Internal Server Error: %s", err.Error()),
-				"headers": make(map[string][]string),
-				"status":  http.StatusInternalServerError,
-				"method":  method,
-				"url":     u,
-			})
-		}
-		req.Header = header
-
-		proxy.ServeHTTP(res, req)
-
-		return vm.ToValue(map[string]interface{}{
-			"body":    res.Body.String(),
-			"headers": map[string][]string(res.Header()),
-			"status":  res.Code,
-			"method":  method,
-			"url":     u,
-		})
+		return nil
 	}
 }

@@ -7,7 +7,7 @@
 
 var Headers = require('node-fetch/lib/headers');
 
-var serverSideFetchFunc = global.__fetch__;
+var __gofetch__ = global.__fetch__;
 delete global.__fetch__;
 
 module.exports = Fetch;
@@ -55,10 +55,10 @@ function Fetch(url, o) {
     options.headers = headers.raw();
 
     // send a request
-    var res = serverSideFetchFunc(url, options);
-    res.url = url;
-
-    resolve(new Response(res));
+    __gofetch__(url, options, function(res){
+      res.url = url;
+      resolve(new Response(res));
+    });
   });
 };
 
