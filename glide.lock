@@ -43,8 +43,3 @@ testImports:
   - difflib
 - name: github.com/stretchr/testify
   version: 2402e8e7a02fc811447d11f881aa9746cdc57983
-  subpackages:
-  - assert
-  - require
-- name: gopkg.in/elazarl/goproxy.v1
-  version: 0a5b8bdb09049ae4ae68e75437ded0b7a2e324e3

@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,15 @@ import (
 	"github.com/olebedev/gojax/fetch/internal/data"
 	"github.com/pkg/errors"
 )
+
+// ContextKey specifies a custom type for the fetch event loop context
+type ContextKey string
+
+// RequestContextKey defines a request scope context value
+const RequestContextKey ContextKey = "request"
+
+// ForwardedHeadersContextKey defines a list of headers that will be forwarded from the context request
+const ForwardedHeadersContextKey ContextKey = "forwardedHeaders"
 
 // Enable enables fetch for the instance. Loop instance is required instead of
 // flat goja's. B/c fetch polyfill uses timeouts for promises.
@@ -45,12 +55,12 @@ func request(loop *eventloop.EventLoop, proxy http.Handler) func(call goja.Funct
 		if fn, ok := goja.AssertFunction(call.Argument(2)); ok {
 			u := call.Argument(0).String()
 			o := call.Argument(1).Export().(map[string]interface{})
+			ctx := loop.GetContext()
 
 			go func() {
 				var body io.Reader
 				method := http.MethodGet
 				header := make(http.Header)
-
 
 				if headers, ex := o["headers"]; ex {
 					if hmap, okh := headers.(map[string]interface{}); okh {
@@ -90,6 +100,8 @@ func request(loop *eventloop.EventLoop, proxy http.Handler) func(call goja.Funct
 						"url":     u,
 					}
 				} else {
+					compositeRequest(ctx, &header, req)
+
 					req.Header = header
 					proxy.ServeHTTP(res, req)
 					toRet = map[string]interface{}{
@@ -104,5 +116,52 @@ func request(loop *eventloop.EventLoop, proxy http.Handler) func(call goja.Funct
 			}()
 		}
 		return nil
+	}
+}
+
+// composite loop scoped request headers, context, and cookies into the synthetic
+// request if a request exists in the EventLoop context
+func compositeRequest(ctx context.Context, header *http.Header, req *http.Request) {
+	if ctx == nil {
+		return
+	}
+
+	// composite loop scoped request headers, context, and cookies if exists in the EventLoop context
+	if contextRequest := ctx.Value(RequestContextKey); contextRequest != nil {
+		castRequest, ok := contextRequest.(*http.Request)
+		if ok {
+			if len(castRequest.Cookies()) > 0 {
+				for _, cookie := range castRequest.Cookies() {
+					req.AddCookie(cookie)
+				}
+			}
+
+			if castRequest.Context() != nil {
+				req = req.WithContext(castRequest.Context())
+			}
+
+			forwardedHeaders := ctx.Value(ForwardedHeadersContextKey)
+			if forwardedHeaders != nil {
+				castForwardedHeaders, ok := forwardedHeaders.([]string)
+				if ok {
+					if len(castForwardedHeaders) > 0 {
+						for _, headerName := range castForwardedHeaders {
+							headerValues := castRequest.Header[headerName]
+							addToHeader(header, headerName, headerValues)
+						}
+					} else {
+						for headerName, headerValues := range castRequest.Header {
+							addToHeader(header, headerName, headerValues)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func addToHeader(header *http.Header, headerName string, headerValues []string) {
+	for _, headerValue := range headerValues {
+		header.Add(headerName, headerValue)
 	}
 }
