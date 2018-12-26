@@ -23,7 +23,7 @@ func main() {
 	loop.Start()
 	defer loop.Stop()
 
-	fetch.Enable(loop, httputil.NewSingleHostReverseProxy(url.Parse("/")))
+	fetch.Enable(loop, httputil.NewSingleHostReverseProxy(url.Parse("https://ya.ru")))
 
 	wait := make(chan string, 1)
 	loop.RunOnLoop(func(vm *goja.Runtime) {
@@ -78,7 +78,7 @@ func main() {
 	loop.Start()
 	defer loop.Stop()
 
-	fetch.Enable(loop, httputil.NewSingleHostReverseProxy(url.Parse("/")))
+	fetch.Enable(loop, httputil.NewSingleHostReverseProxy(url.Parse("https://ya.ru")))
 
 	// create a context that holds the request and any headers you want forwarded from the original request
 	ctx := generateRequestContext(request)
