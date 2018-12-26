@@ -11,8 +11,7 @@ package main
 
 import (
 	"fmt"
-
-	goproxy "gopkg.in/elazarl/goproxy.v1"
+	"net/http/httputil"
 
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/eventloop"
@@ -24,7 +23,7 @@ func main() {
 	loop.Start()
 	defer loop.Stop()
 
-	fetch.Enable(loop, goproxy.NewProxyHttpServer())
+	fetch.Enable(loop, httputil.NewSingleHostReverseProxy(url.Parse("/")))
 
 	wait := make(chan string, 1)
 	loop.RunOnLoop(func(vm *goja.Runtime) {
@@ -57,8 +56,7 @@ package main
 import (
 	"context"
 	"fmt"
-
-	goproxy "gopkg.in/elazarl/goproxy.v1"
+	"net/http/httputil"
 
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/eventloop"
@@ -80,7 +78,7 @@ func main() {
 	loop.Start()
 	defer loop.Stop()
 
-	fetch.Enable(loop, goproxy.NewProxyHttpServer())
+	fetch.Enable(loop, httputil.NewSingleHostReverseProxy(url.Parse("/")))
 
 	// create a context that holds the request and any headers you want forwarded from the original request
 	ctx := generateRequestContext(request)
