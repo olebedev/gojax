@@ -2,10 +2,10 @@ package fetch
 
 import (
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"sync"
 	"testing"
-
-	goproxy "gopkg.in/elazarl/goproxy.v1"
 
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/eventloop"
@@ -17,7 +17,10 @@ func TestEnable(t *testing.T) {
 	loop.Start()
 	defer loop.Stop()
 
-	Enable(loop, goproxy.NewProxyHttpServer())
+	url, _ := url.Parse("/")
+	proxy := httputil.NewSingleHostReverseProxy(url)
+
+	Enable(loop, proxy)
 
 	var v goja.Value
 	var err error
@@ -39,7 +42,10 @@ func TestRequest(t *testing.T) {
 	loop.Start()
 	defer loop.Stop()
 
-	Enable(loop, goproxy.NewProxyHttpServer())
+	url, _ := url.Parse("https://ya.ru")
+	proxy := httputil.NewSingleHostReverseProxy(url)
+
+	Enable(loop, proxy)
 
 	wait := make(chan string, 1)
 	loop.RunOnLoop(func(vm *goja.Runtime) {

@@ -9,4 +9,3 @@ testImport:
 - package: github.com/stretchr/testify
   subpackages:
   - require
-- package: gopkg.in/elazarl/goproxy.v1
