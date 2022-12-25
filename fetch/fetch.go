@@ -11,7 +11,7 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/eventloop"
-	"github.com/olebedev/gojax/fetch/internal/data"
+	"github.com/fy0/gojax/fetch/internal/data"
 	"github.com/pkg/errors"
 )
 
