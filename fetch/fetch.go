@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/eventloop"
@@ -40,11 +41,21 @@ func Enable(loop *eventloop.EventLoop, proxy http.Handler) error {
 	return nil
 }
 
+func urlEncode(u string) string {
+	u2, err := url.Parse(u)
+	if err != nil {
+		panic(err)
+	}
+	u2.RawQuery = u2.Query().Encode()
+	return u2.String()
+}
+
 func request(loop *eventloop.EventLoop, proxy http.Handler) func(call goja.FunctionCall) goja.Value {
 	return func(call goja.FunctionCall) goja.Value {
 		if fn, ok := goja.AssertFunction(call.Argument(2)); ok {
 			u := call.Argument(0).String()
 			o := call.Argument(1).Export().(map[string]interface{})
+			u = urlEncode(u)
 
 			go func() {
 				var body io.Reader
